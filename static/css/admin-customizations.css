@@ -1,0 +1,127 @@
+/* Custom CSS for the admin interface */
+.CodeMirror {
+    height: auto;
+    min-height: 150px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-family: "Fira Code", "SFMono-Regular", monospace;
+    font-size: 14px;
+    margin-bottom: 15px;
+}
+
+.field-setup_code .CodeMirror,
+.field-sanitize_js .CodeMirror {
+    min-height: 250px;
+}
+
+/* Better styling for the placeholder sanitization section */
+.inline-group h2 {
+    background: #f5f5f5;
+    padding: 10px 15px;
+    border-radius: 4px;
+    font-size: 16px;
+}
+
+.inline-related h3 {
+    background: #f0f0f0;
+    padding: 8px 12px;
+    border-radius: 4px;
+    margin-bottom: 10px;
+}
+
+/* Style for the SQL editor */
+.vLargeTextField + div .CodeMirror {
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+/* Tabs for the placeholder inlines */
+.placeholder-tabs {
+    display: flex;
+    margin-bottom: 15px;
+    border-bottom: 1px solid #ddd;
+}
+
+.placeholder-tabs a {
+    padding: 10px 15px;
+    margin-right: 5px;
+    border: 1px solid #ddd;
+    border-bottom: none;
+    border-radius: 4px 4px 0 0;
+    background: #f5f5f5;
+    text-decoration: none;
+    color: #666;
+}
+
+.placeholder-tabs a.active {
+    background: white;
+    border-bottom: 1px solid white;
+    margin-bottom: -1px;
+    color: #333;
+    font-weight: bold;
+}
+
+/* Override for the Django admin style */
+.module h2, .module caption, .inline-group h2 {
+    background: #5a5a7a;
+    color: white;
+}
+
+/* Custom styling for the code editor widgets */
+.CodeMirror-fullscreen {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    height: auto;
+    z-index: 9999;
+}
+
+/* Toolbar for CodeMirror */
+.editor-toolbar {
+    background: #f5f5f5;
+    padding: 5px;
+    border: 1px solid #ddd;
+    border-bottom: none;
+    border-radius: 4px 4px 0 0;
+    display: flex;
+    gap: 5px;
+}
+
+.editor-toolbar button {
+    background: #fff;
+    border: 1px solid #ccc;
+    border-radius: 3px;
+    padding: 3px 8px;
+    cursor: pointer;
+}
+
+.editor-toolbar button:hover {
+    background: #eee;
+}
+
+/* Prevent text overflow in select fields */
+select {
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Better styling for placeholder inputs */
+#placeholder_set-group .form-row {
+    padding: 10px;
+    border-bottom: 1px solid #eee;
+}
+
+#placeholder_set-group .form-row:last-child {
+    border-bottom: none;
+}
+
+/* Highlight the active row */
+#placeholder_set-group .form-row:hover {
+    background-color: #f9f9f9;
+}
+
+/* Ensure proper spacing for inline forms */
+.inline-related fieldset {
+    margin-bottom: 20px !important;
+}

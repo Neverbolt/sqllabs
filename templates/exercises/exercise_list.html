@@ -1,0 +1,84 @@
+{% extends 'base.html' %}
+
+{% block title %}SQL Labs - Learn SQL Injection{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12 mb-4">
+        <h2 class="display-5 fw-bold">SQL Injection Challenges</h2>
+        <p class="lead">
+            Practice SQL injection techniques in a safe environment.
+            From basic queries to advanced time-based blind injections.
+        </p>
+    </div>
+</div>
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div class="difficulty-legend d-flex align-items-center gap-3">
+        <span class="d-flex align-items-center">
+            <i class="bi bi-circle-fill text-success me-1"></i> Beginner
+        </span>
+        <span class="d-flex align-items-center">
+            <i class="bi bi-circle-fill text-warning me-1"></i> Intermediate
+        </span>
+        <span class="d-flex align-items-center">
+            <i class="bi bi-circle-fill text-danger me-1"></i> Advanced
+        </span>
+    </div>
+    <div class="progress-stats">
+        <span class="badge bg-primary">
+            <i class="bi bi-trophy-fill"></i> 
+            {% with solved_count=solved_exercises|length %}
+                {{ solved_count }} / {{ exercises|length }} Solved
+            {% endwith %}
+        </span>
+    </div>
+</div>
+
+<div class="exercise-grid">
+    {% for exercise in exercises %}
+    <div class="card exercise-card" style="border-top: 4px solid {{ exercise.color }};">
+        <div class="card-header">
+            <div class="window-controls" aria-hidden="true">
+                <div class="control control-close"></div>
+                <div class="control control-minimize"></div>
+                <div class="control control-maximize"></div>
+            </div>
+            <h5 class="card-title mb-0">{{ exercise.title }}</h5>
+            <span class="difficulty">
+                {% if exercise.difficulty <= 3 %}
+                <i class="bi bi-circle-fill text-success"></i>
+                {% elif exercise.difficulty <= 6 %}
+                <i class="bi bi-circle-fill text-warning"></i>
+                {% else %}
+                <i class="bi bi-circle-fill text-danger"></i>
+                {% endif %}
+                {{ exercise.difficulty }}/10
+            </span>
+        </div>
+        <div class="card-body">
+            <p class="card-text">{{ exercise.description|striptags|truncatechars:100 }}</p>
+            
+            {% if exercise.id in solved_exercises %}
+            <div class="d-flex justify-content-between align-items-center">
+                <a href="{% url 'exercise_detail' exercise.id %}" class="btn btn-outline-primary">
+                    <i class="bi bi-arrow-repeat"></i> Revisit
+                </a>
+                <span class="badge bg-success"><i class="bi bi-check-lg"></i> Solved</span>
+            </div>
+            {% else %}
+            <a href="{% url 'exercise_detail' exercise.id %}" class="btn btn-primary">
+                <i class="bi bi-play-fill"></i> Start Challenge
+            </a>
+            {% endif %}
+        </div>
+    </div>
+    {% empty %}
+    <div class="col-12">
+        <div class="alert alert-info">
+            <i class="bi bi-info-circle"></i> No exercises available yet. Please check back later.
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}
