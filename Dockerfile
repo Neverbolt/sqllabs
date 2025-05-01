@@ -37,11 +37,7 @@ RUN addgroup --system django && adduser --system --group django
 RUN chown -R django:django /app
 USER django
 
-# Create example exercises
-RUN python create_all_exercises.py
-
 # Expose the port
 EXPOSE $PORT
 
-# Start gunicorn
-CMD gunicorn sqllabs.wsgi:application --bind 0.0.0.0:$PORT
+ENTRYPOINT [ "./entrypoint.sh" ]
