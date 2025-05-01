@@ -1,6 +1,30 @@
 from django.db import models
 from django.core.validators import MinValueValidator, MaxValueValidator
-from colorfield.fields import ColorField
+from django.utils import timezone
+
+
+class Category(models.Model):
+    """Model for categorizing exercises."""
+    
+    name = models.CharField(
+        max_length=100,
+        help_text="Category name"
+    )
+    description = models.TextField(
+        blank=True,
+        help_text="Description of the category"
+    )
+    order = models.IntegerField(
+        default=0,
+        help_text="Display order in listing"
+    )
+    
+    class Meta:
+        ordering = ['order', 'name']
+        verbose_name_plural = 'Categories'
+    
+    def __str__(self):
+        return self.name
 
 
 class Placeholder(models.Model):
@@ -37,6 +61,11 @@ class Placeholder(models.Model):
         blank=True,
         help_text="Description of the placeholder for the admin interface"
     )
+    default_value = models.CharField(
+        max_length=255,
+        blank=True,
+        help_text="Default value for the placeholder"
+    )
     sanitize_js = models.TextField(
         blank=True,
         null=False,
@@ -65,6 +94,8 @@ function sanitize(value) {
         }
         if self.type == 'regex' and self.regex_pattern:
             data['regex_pattern'] = self.regex_pattern
+        if self.default_value:
+            data['default_value'] = self.default_value
         return data
 
 
@@ -73,6 +104,23 @@ class Exercise(models.Model):
     
     title = models.CharField(max_length=100)
     description = models.TextField(help_text="Exercise description and instructions")
+    hints = models.TextField(
+        blank=True, 
+        null=True,
+        help_text="Optional hints for the exercise (supports markdown). Multiple hints can be separated with '---'"
+    )
+    category = models.ForeignKey(
+        Category, 
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='exercises',
+        help_text="The category this exercise belongs to"
+    )
+    view_count = models.PositiveIntegerField(default=0, help_text="Number of times this exercise has been viewed")
+    solve_count = models.PositiveIntegerField(default=0, help_text="Number of times this exercise has been solved")
+    created_at = models.DateTimeField(default=timezone.now)
+    updated_at = models.DateTimeField(default=timezone.now)
     setup_code = models.TextField(
         help_text="SQL to initialize database (create tables, insert data)"
     )
@@ -123,10 +171,7 @@ class Exercise(models.Model):
         default=0,
         help_text="Display order in listing"
     )
-    color = ColorField(
-        default='#007bff',
-        help_text="Color to represent this exercise"
-    )
+    # Color field removed - now using difficulty-based colors
     
     def save(self, *args, **kwargs):
         # First save to get a primary key

@@ -250,11 +250,32 @@ body {
     color: inherit;
 }
 
+/* Category section styles */
+.category-section {
+    margin-bottom: 30px;
+}
+
+.category-title {
+    font-size: 1.6rem;
+    margin-bottom: 0.5rem;
+    color: var(--dark-color);
+    border-bottom: 2px solid var(--primary-color);
+    padding-bottom: 5px;
+    display: inline-block;
+}
+
+.category-description {
+    margin-bottom: 1rem;
+    font-size: 1rem;
+    color: var(--gray-color);
+}
+
 /* Exercise grid */
 .exercise-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr));
     gap: 20px;
+    margin-bottom: 10px;
 }
 
 .exercise-card {
@@ -599,4 +620,88 @@ select:focus,
     .btn:focus {
         transform: none;
     }
+}
+
+/* Hints styling */
+.hints-container {
+    margin-top: 20px;
+}
+
+/* Individual hint styling */
+.hint-number {
+    font-weight: 500;
+    position: relative;
+}
+
+/* Give a slight visual distinction between consecutive hints */
+.accordion-item + .accordion-item {
+    margin-top: 8px;
+}
+
+/* Style the hint content */
+.hint-content {
+    line-height: 1.6;
+}
+
+.hint-content p:last-child {
+    margin-bottom: 0;
+}
+
+/* Add a subtle visual indicator for hint progression */
+#hintsAccordion .accordion-item:nth-child(1) .accordion-button {
+    border-left: 4px solid #5cb85c; /* Easy - green */
+}
+
+#hintsAccordion .accordion-item:nth-child(2) .accordion-button {
+    border-left: 4px solid #f0ad4e; /* Medium - yellow */
+}
+
+#hintsAccordion .accordion-item:nth-child(3) .accordion-button {
+    border-left: 4px solid #d9534f; /* Hard - red */
+}
+
+#hintsAccordion .accordion-item:nth-child(n+4) .accordion-button {
+    border-left: 4px solid #9c27b0; /* Very hard - purple */
+}
+
+.accordion-button:not(.collapsed) {
+    background-color: rgba(13, 110, 253, 0.1);
+    color: #0d6efd;
+}
+
+.accordion-button:focus {
+    box-shadow: none;
+    border-color: rgba(0,0,0,.125);
+}
+
+/* Replace the default accordion icons with lightbulb icons */
+.accordion-button.collapsed::after {
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='currentColor' class='bi bi-lightbulb' viewBox='0 0 16 16'%3e%3cpath d='M8 0a6 6 0 0 0-6 6c0 2.585 1.355 4.88 3.44 6.188A1 1 0 0 0 6 13.5h4a1 1 0 0 0 .56-.281C12.817 11.834 14 9.693 14 6A6 6 0 0 0 8 0M7 7.5a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-1a.5.5 0 0 1-.5-.5v-1z'/%3e%3c/svg%3e");
+    transform: rotate(0deg);
+}
+
+.accordion-button:not(.collapsed)::after {
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='currentColor' class='bi bi-lightbulb-fill' viewBox='0 0 16 16'%3e%3cpath d='M8 0a6 6 0 0 0-6 6c0 2.585 1.355 4.88 3.44 6.188A1 1 0 0 0 6 13.5h4a1 1 0 0 0 .56-.281C12.645 11.88 14 9.585 14 7c0-3.254-2.746-6-6-6M7 7.5a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-1a.5.5 0 0 1-.5-.5v-1z'/%3e%3c/svg%3e");
+}
+
+/* Add a badge to indicate unopened hints */
+.accordion-button.collapsed .hint-number::after {
+    content: "NEW";
+    font-size: 0.65rem;
+    background-color: var(--accent-color);
+    color: var(--dark-color);
+    padding: 0.15rem 0.4rem;
+    border-radius: 10px;
+    margin-left: 8px;
+    font-weight: bold;
+    display: inline-block;
+    opacity: 0;
+    animation: fadeIn 0.3s ease-in-out forwards;
+    animation-delay: 0.2s;
+}
+
+/* Remove the badge once the hint is opened */
+.accordion-button:not(.collapsed) .hint-number::after,
+.accordion-button .hint-number.viewed::after {
+    display: none;
 }

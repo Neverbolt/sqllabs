@@ -27,15 +27,11 @@ def reset_exercises():
         print("Operation cancelled.")
         return
 
-    # Delete all placeholders
-    placeholder_count = Placeholder.objects.count()
-    Placeholder.objects.all().delete()
-
     # Delete all exercises
     exercise_count = Exercise.objects.count()
     Exercise.objects.all().delete()
 
-    print(f"Deleted {exercise_count} exercises and {placeholder_count} placeholders.")
+    print(f"Deleted {exercise_count} exercises placeholders.")
 
 
 if __name__ == "__main__":
@@ -45,15 +41,9 @@ if __name__ == "__main__":
     if len(sys.argv) > 1 and sys.argv[1] == '--recreate':
         print("\nRecreating example exercises...")
         # Use the current directory to find the create_all_exercises.py script
-        current_dir = os.path.dirname(os.path.abspath(__file__))
-        create_script = os.path.join(current_dir, 'create_all_exercises.py')
+        from create_all_exercises import create_all_exercises
 
-        if os.path.exists(create_script):
-            # Execute the create_all_exercises.py script
-            exec(open(create_script).read())
-        else:
-            print(f"Error: Could not find {create_script}")
-            print("Please run 'python example_exercises/create_all_exercises.py' manually.")
+        create_all_exercises()
     else:
         print("\nTo recreate example exercises, run:")
-        print("python example_exercises/reset_exercises.py --recreate")
+        print("python reset_exercises.py --recreate")

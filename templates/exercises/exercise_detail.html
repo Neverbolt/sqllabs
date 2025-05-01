@@ -18,6 +18,12 @@
             {% if is_solved %}
             <span class="badge bg-success">Solved</span>
             {% endif %}
+            <span class="badge bg-secondary ms-2">
+                <i class="bi bi-eye"></i> {{ exercise.view_count }}
+            </span>
+            <span class="badge bg-info">
+                <i class="bi bi-trophy"></i> {{ exercise.solve_count }}
+            </span>
         </div>
     </div>
 </div>
@@ -26,7 +32,7 @@
     <!-- Exercise description and challenge -->
     <div class="col-lg-8 mb-4">
         <div class="card">
-            <div class="card-header" style="background-color: {{ exercise.color }};">
+            <div class="card-header" style="background-color: {% if exercise.difficulty <= 3 %}var(--bs-success){% elif exercise.difficulty <= 6 %}var(--bs-warning){% else %}var(--bs-danger){% endif %}">
                 <div class="window-controls" aria-hidden="true">
                     <div class="control control-close"></div>
                     <div class="control control-minimize"></div>
@@ -39,10 +45,23 @@
                     {{ exercise.description|safe }}
                 </div>
                 
+                {% if exercise.hints %}
+                <div class="hints-container mt-4">
+                    <h5><i class="bi bi-lightbulb me-2"></i> Hints</h5>
+                    <p class="text-muted small">Click each hint individually to reveal additional help.</p>
+                    <div class="accordion" id="hintsAccordion">
+                        <!-- Hints will be inserted here by JavaScript -->
+                        <div id="hints-content" style="display: none;">
+                            {{ exercise.hints|safe }}
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+                
                 <script>
                     // Process markdown when the document is loaded
                     document.addEventListener("DOMContentLoaded", function() {
-                        // Get the description element
+                        // Process description markdown
                         const descriptionElement = document.getElementById('challenge-description');
                         if (descriptionElement && typeof marked !== 'undefined') {
                             // Get the raw markdown
@@ -51,6 +70,133 @@
                             const htmlContent = marked.parse(rawMarkdown);
                             // Set the HTML content
                             descriptionElement.innerHTML = htmlContent;
+                        }
+                        
+                        // Process hints markdown if exists
+                        const hintsElement = document.getElementById('hints-content');
+                        const hintsAccordion = document.getElementById('hintsAccordion');
+                        
+                        if (hintsElement && hintsAccordion && typeof marked !== 'undefined') {
+                            // Get the raw markdown
+                            const rawHints = hintsElement.textContent || hintsElement.innerText;
+                            
+                            // Check if we have multiple hints separated by '---'
+                            if (rawHints.includes('---')) {
+                                // Split hints by separator
+                                const hintsList = rawHints.split('---').map(hint => hint.trim());
+                                
+                                // Create individual accordion items for each hint
+                                hintsList.forEach((hint, index) => {
+                                    // Parse markdown for each hint
+                                    const hintHtml = marked.parse(hint);
+                                    
+                                    // Create an accordion item for this hint
+                                    const accordionItem = document.createElement('div');
+                                    accordionItem.className = 'accordion-item';
+                                    
+                                    // Unique IDs for this hint
+                                    const headingId = `hint-heading-${index}`;
+                                    const collapseId = `hint-collapse-${index}`;
+                                    
+                                    // Create the heading and button
+                                    accordionItem.innerHTML = `
+                                        <h2 class="accordion-header" id="${headingId}">
+                                            <button class="accordion-button collapsed" type="button" 
+                                                    data-bs-toggle="collapse" data-bs-target="#${collapseId}" 
+                                                    aria-expanded="false" aria-controls="${collapseId}">
+                                                <span class="hint-number">Hint ${index + 1}</span>
+                                            </button>
+                                        </h2>
+                                        <div id="${collapseId}" class="accordion-collapse collapse" 
+                                             aria-labelledby="${headingId}" data-bs-parent="#hintsAccordion">
+                                            <div class="accordion-body">
+                                                <div class="hint-content">${hintHtml}</div>
+                                            </div>
+                                        </div>
+                                    `;
+                                    
+                                    // Add to the accordion
+                                    hintsAccordion.appendChild(accordionItem);
+                                });
+                            } else if (rawHints.trim()) {
+                                // Just a single hint - create one accordion item
+                                const hintHtml = marked.parse(rawHints);
+                                
+                                // Create an accordion item
+                                const accordionItem = document.createElement('div');
+                                accordionItem.className = 'accordion-item';
+                                
+                                // Single hint with ID
+                                const headingId = 'hint-heading-0';
+                                const collapseId = 'hint-collapse-0';
+                                
+                                // Create the heading and button
+                                accordionItem.innerHTML = `
+                                    <h2 class="accordion-header" id="${headingId}">
+                                        <button class="accordion-button collapsed" type="button" 
+                                                data-bs-toggle="collapse" data-bs-target="#${collapseId}" 
+                                                aria-expanded="false" aria-controls="${collapseId}">
+                                            <span class="hint-number">Hint</span>
+                                        </button>
+                                    </h2>
+                                    <div id="${collapseId}" class="accordion-collapse collapse" 
+                                         aria-labelledby="${headingId}" data-bs-parent="#hintsAccordion">
+                                        <div class="accordion-body">
+                                            <div class="hint-content">${hintHtml}</div>
+                                        </div>
+                                    </div>
+                                `;
+                                
+                                // Add to the accordion
+                                hintsAccordion.appendChild(accordionItem);
+                            }
+                            
+                            // Hide the original content element now that we've processed it
+                            hintsElement.style.display = 'none';
+                            
+                            // Set up tracking for viewed hints
+                            setupHintTracking();
+                        }
+                        
+                        // Function to track which hints have been viewed
+                        function setupHintTracking() {
+                            // Get viewed hints from localStorage
+                            const exerciseId = {{ exercise.id }};
+                            let viewedHints = JSON.parse(localStorage.getItem('viewed_hints') || '{}');
+                            
+                            // Initialize for this exercise if not exists
+                            if (!viewedHints[exerciseId]) {
+                                viewedHints[exerciseId] = [];
+                            }
+                            
+                            // Add event listeners to all hint accordions
+                            const hintButtons = document.querySelectorAll('#hintsAccordion .accordion-button');
+                            
+                            hintButtons.forEach((button, index) => {
+                                // Remove NEW badge if this hint has already been viewed
+                                if (viewedHints[exerciseId].includes(index)) {
+                                    const hintNumber = button.querySelector('.hint-number');
+                                    if (hintNumber) {
+                                        hintNumber.classList.add('viewed');
+                                    }
+                                }
+                                
+                                // Add click event listener to track when a hint is viewed
+                                button.addEventListener('click', function() {
+                                    // Only track if it's being opened and hasn't been viewed before
+                                    if (button.classList.contains('collapsed') && !viewedHints[exerciseId].includes(index)) {
+                                        // Add to viewed hints
+                                        viewedHints[exerciseId].push(index);
+                                        localStorage.setItem('viewed_hints', JSON.stringify(viewedHints));
+                                        
+                                        // Mark as viewed (to override CSS)
+                                        const hintNumber = button.querySelector('.hint-number');
+                                        if (hintNumber) {
+                                            hintNumber.classList.add('viewed');
+                                        }
+                                    }
+                                });
+                            });
                         }
                     });
                 </script>
@@ -68,7 +214,16 @@
                         <h5>JavaScript Code</h5>
                         <p class="text-muted small">
                             Write JavaScript code to execute SQL queries programmatically. 
-                            Use the <code>execQuery(queryString, params)</code> function to run queries. 
+                            Use the <code>execQuery()</code> function to run the predefined query with your parameter values.
+                            {% if exercise.placeholders %}
+                            <strong>Parameter options:</strong>
+                            <ul class="mb-1">
+                                <li>Named parameters: <code>execQuery({ {% for p in exercise.placeholders %}{{ p.name }}: "value"{% if not forloop.last %}, {% endif %}{% endfor %} })</code></li>
+                                <li>Positional parameters: <code>execQuery({% for p in exercise.placeholders %}"value"{% if not forloop.last %}, {% endif %}{% endfor %})</code></li>
+                            </ul>
+                            {% else %}
+                            <strong>No parameters required:</strong> <code>execQuery()</code>
+                            {% endif %}
                             See SQL Quick Reference for more information.
                         </p>
                         <div id="js-editor" class="mb-3" tabindex="0" aria-label="JavaScript editor for running SQL queries"></div>
@@ -121,6 +276,7 @@
                         You've successfully completed this challenge.
                         {% endif %}
                     </p>
+                    <div class="success-stats"></div>
                 </div>
             </div>
         </div>

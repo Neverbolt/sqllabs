@@ -15,7 +15,7 @@ document.addEventListener("DOMContentLoaded", function () {
       // Set up the editor and form if on exercise page
       if (typeof exercise !== "undefined") {
         setupEditor();
-        
+
         // Setup either the placeholder form or JS editor based on mode
         if (exercise.allow_js) {
           setupJsEditor();
@@ -155,7 +155,7 @@ function setupEditor() {
   if (typeof exercise === "undefined" || !exercise.show_query) return;
 
   const editorElement = document.getElementById("sql-editor");
-  
+
   // Check if editor element exists
   if (!editorElement) return;
 
@@ -180,26 +180,31 @@ function setupPlaceholderForm() {
 
   const placeholderFields = document.getElementById("placeholder-fields");
   if (!placeholderFields) return;
-  
+
   placeholderFields.innerHTML = "";
 
   // Check if placeholders exist and is an array
-  if (!exercise.placeholders || !Array.isArray(exercise.placeholders) || exercise.placeholders.length === 0) {
+  if (
+    !exercise.placeholders ||
+    !Array.isArray(exercise.placeholders) ||
+    exercise.placeholders.length === 0
+  ) {
     console.warn("No placeholders defined for this exercise");
     const noPlaceholders = document.createElement("div");
     noPlaceholders.className = "alert alert-info";
-    noPlaceholders.textContent = "No input parameters required for this exercise.";
+    noPlaceholders.textContent =
+      "No input parameters required for this exercise.";
     placeholderFields.appendChild(noPlaceholders);
     return;
   }
 
   // Create input fields for each placeholder
   exercise.placeholders.forEach((placeholder) => {
-    if (!placeholder || typeof placeholder !== 'object' || !placeholder.name) {
+    if (!placeholder || typeof placeholder !== "object" || !placeholder.name) {
       console.warn("Invalid placeholder format:", placeholder);
       return;
     }
-    
+
     const formGroup = document.createElement("div");
     formGroup.className = "form-group mb-3";
 
@@ -222,6 +227,10 @@ function setupPlaceholderForm() {
     input.setAttribute("data-type", placeholder.type || "str");
     if (placeholder.type === "regex" && placeholder.regex_pattern) {
       input.setAttribute("data-pattern", placeholder.regex_pattern);
+    }
+    // Set default value if available
+    if (placeholder.default_value) {
+      input.value = placeholder.default_value;
     }
     formGroup.appendChild(input);
 
@@ -256,14 +265,34 @@ function setupPlaceholderForm() {
       localStorage.setItem("exercise_inputs", JSON.stringify(storedInputs));
     }
 
-    // Give time for the form to reset
+    // Give time for the form to reset, then restore default values
     setTimeout(() => {
+      // Restore default values if available
+      if (Array.isArray(exercise.placeholders)) {
+        exercise.placeholders.forEach((placeholder) => {
+          if (placeholder.default_value) {
+            const input = document.getElementById(`placeholder-${placeholder.name}`);
+            if (input) {
+              input.value = placeholder.default_value;
+            }
+          }
+        });
+      }
+      
       updateEditorWithPlaceholders();
     }, 50);
   });
 
   // Load any previously saved inputs
   loadInputsFromSession();
+  
+  // Validate all inputs after setup to update the editor with default values
+  exercise.placeholders.forEach((placeholder) => {
+    const input = document.getElementById(`placeholder-${placeholder.name}`);
+    if (input) {
+      validatePlaceholderInput(input);
+    }
+  });
 
   // Show solution if available (this might be a previously solved exercise)
   const storedSolutions = JSON.parse(
@@ -379,6 +408,9 @@ function executeQuery() {
 
   // Clear previous results
   hideResults();
+  
+  // Track view count for this exercise in this session
+  trackExerciseView(exercise.id);
 
   // Get the query with placeholders replaced
   let query = exercise.base_query;
@@ -392,14 +424,14 @@ function executeQuery() {
   if (Array.isArray(exercise.placeholders)) {
     exercise.placeholders.forEach((placeholder) => {
       if (!placeholder || !placeholder.name) return;
-      
+
       const input = document.getElementById(`placeholder-${placeholder.name}`);
       if (input) {
         let value = input.value.trim();
-  
+
         // Store value for session storage
         inputValues[placeholder.name] = value;
-  
+
         // Check if input is filled
         if (!value) {
           allInputsFilled = false;
@@ -410,28 +442,34 @@ function executeQuery() {
             errorDiv.style.display = "block";
           }
         }
-  
+
         // Check if input is valid
         if (!validatePlaceholderInput(input)) {
           allInputsValid = false;
         }
-  
+
         // Apply sanitization if available
-        if (window.paramSanitizers && window.paramSanitizers[placeholder.name]) {
+        if (
+          window.paramSanitizers &&
+          window.paramSanitizers[placeholder.name]
+        ) {
           try {
             // Apply the sanitizer function to the value
             value = window.paramSanitizers[placeholder.name](value);
             // Store the sanitized value for display
-            input.setAttribute('data-sanitized-value', value);
-            
+            input.setAttribute("data-sanitized-value", value);
+
             if (exercise.show_query) {
               console.log(`Sanitized ${placeholder.name}: ${value}`);
             }
           } catch (error) {
-            console.error(`Error in sanitization for ${placeholder.name}:`, error);
+            console.error(
+              `Error in sanitization for ${placeholder.name}:`,
+              error,
+            );
           }
         }
-  
+
         // Replace placeholder with value
         query = query.replace(`:${placeholder.name}`, value);
       }
@@ -455,6 +493,12 @@ function executeQuery() {
 
   // Show loading indicator
   showLoading();
+  
+  // Disable the run button during execution
+  const runJsButton = document.getElementById("run-js-btn");
+  if (runJsButton) {
+    runJsButton.disabled = true;
+  }
 
   // Use setTimeout to allow the loading indicator to render
   setTimeout(() => {
@@ -475,20 +519,24 @@ function executeQuery() {
 
         // Show success message if flag found
         if (flagFound) {
-          showSuccess();
-
-          // Mark as solved in session if not already solved
+          // Mark as solved in session if not already solved 
           if (!isSolved) {
-            markExerciseSolved(inputValues);
-
-            // Add confetti effect on success
-            if (typeof confetti !== "undefined") {
-              confetti({
-                particleCount: 100,
-                spread: 70,
-                origin: { y: 0.6 },
+            markExerciseSolved(inputValues)
+              .then(responseData => {
+                // Show success with stats
+                showSuccess(responseData ? responseData.stats : null);
               });
-            }
+          } else {
+            showSuccess();
+          }
+
+          // Add confetti effect on success
+          if (typeof confetti !== "undefined") {
+            confetti({
+              particleCount: 100,
+              spread: 70,
+              origin: { y: 0.6 },
+            });
           }
         }
       }, 300);
@@ -535,10 +583,10 @@ function checkForFlag(results) {
 
   // Convert flag to lowercase for case-insensitive comparison
   const expectedFlag = exercise.expected_flag.toLowerCase();
-  
+
   // Convert anti-flag to lowercase if it exists
   const antiFlag = exercise.anti_flag ? exercise.anti_flag.toLowerCase() : null;
-  
+
   // First check if anti-flag appears in results - if it does, fail
   if (antiFlag) {
     for (const result of results) {
@@ -660,9 +708,21 @@ function showError(message) {
 /**
  * Show success message
  */
-function showSuccess() {
+function showSuccess(statsData) {
   const successContainer = document.getElementById("success-container");
   successContainer.style.display = "block";
+  
+  // If we have stats data, display it
+  if (statsData && successContainer.querySelector(".success-stats")) {
+    const statsElement = successContainer.querySelector(".success-stats");
+    statsElement.innerHTML = `
+      <div class="mt-2">
+        <small class="text-muted">
+          This challenge has been viewed ${statsData.views} times and solved ${statsData.solves} times.
+        </small>
+      </div>
+    `;
+  }
 
   // Update UI to show the exercise is solved
   isSolved = true;
@@ -699,12 +759,26 @@ function showLoading() {
     loadingContainer.appendChild(loadingElement);
     loadingContainer.appendChild(loadingText);
 
-    // Insert after the placeholder form
+    // Insert after the placeholder form or js editor section
     const placeholderForm = document.getElementById("placeholder-form");
-    placeholderForm.parentNode.insertBefore(
-      loadingContainer,
-      placeholderForm.nextSibling,
-    );
+    if (placeholderForm) {
+      placeholderForm.parentNode.insertBefore(
+        loadingContainer,
+        placeholderForm.nextSibling,
+      );
+    } else {
+      // For JS mode, insert after the js-editor-section
+      const jsEditorSection = document.getElementById("js-editor-section");
+      if (jsEditorSection) {
+        jsEditorSection.parentNode.insertBefore(
+          loadingContainer,
+          jsEditorSection.nextSibling,
+        );
+      } else {
+        // Fallback to appending to the sql-editor-section
+        document.getElementById("sql-editor-section").appendChild(loadingContainer);
+      }
+    }
   }
 
   loadingContainer.style.display = "block";
@@ -732,18 +806,27 @@ function hideLoading() {
     loadingContainer.style.display = "none";
   }
 
-  // Re-enable form inputs and button
-  const submitButton = document.querySelector(
-    '#placeholder-form button[type="submit"]',
-  );
-  if (submitButton) {
-    submitButton.disabled = false;
-  }
+  // Re-enable form inputs and button if in placeholder mode
+  const placeholderForm = document.getElementById("placeholder-form");
+  if (placeholderForm) {
+    const submitButton = document.querySelector(
+      '#placeholder-form button[type="submit"]',
+    );
+    if (submitButton) {
+      submitButton.disabled = false;
+    }
 
-  const inputs = document.querySelectorAll("#placeholder-form input");
-  inputs.forEach((input) => {
-    input.disabled = false;
-  });
+    const inputs = document.querySelectorAll("#placeholder-form input");
+    inputs.forEach((input) => {
+      input.disabled = false;
+    });
+  } else if (exercise.allow_js) {
+    // Re-enable JS run button if in JS mode
+    const runJsButton = document.getElementById("run-js-btn");
+    if (runJsButton) {
+      runJsButton.disabled = false;
+    }
+  }
 }
 
 /**
@@ -778,9 +861,12 @@ function loadInputsFromSession() {
     Object.keys(exerciseInputs).forEach((name) => {
       const input = document.getElementById(`placeholder-${name}`);
       if (input) {
-        input.value = exerciseInputs[name];
-        // Validate the input
-        validatePlaceholderInput(input);
+        // Only set value if there's a stored value (non-empty string)
+        if (exerciseInputs[name] !== '') {
+          input.value = exerciseInputs[name];
+          // Validate the input
+          validatePlaceholderInput(input);
+        }
       }
     });
 
@@ -791,8 +877,49 @@ function loadInputsFromSession() {
 
 /**
  * Mark exercise as solved in the session
+ * @returns {Promise} Promise that resolves with the server response data
+ */
+/**
+ * Track that an exercise was viewed in this session and increment server counter
+ */
+function trackExerciseView(exerciseId) {
+  // Initialize viewed_exercises in session if not exists
+  let viewedExercises = JSON.parse(
+    sessionStorage.getItem("viewed_exercises") || "[]"
+  );
+  
+  // Only track the first view per session
+  if (!viewedExercises.includes(exerciseId)) {
+    // Add to viewed exercises
+    viewedExercises.push(exerciseId);
+    sessionStorage.setItem("viewed_exercises", JSON.stringify(viewedExercises));
+    
+    // Get CSRF token
+    const csrfToken = getCsrfToken();
+    if (!csrfToken) {
+      console.error("CSRF token not found - cannot track exercise view");
+      return;
+    }
+    
+    // Send to the server
+    fetch(`/exercise/${exerciseId}/viewed/`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-CSRFToken": csrfToken,
+      }
+    }).catch(error => {
+      console.error("Error tracking exercise view:", error);
+    });
+  }
+}
+
+/**
+ * Mark exercise as solved in the session
+ * @returns {Promise} Promise that resolves with the server response data
  */
 function markExerciseSolved(inputValues) {
+  console.warn("marking as solved");
   // Store the solution inputs with a success flag
   let storedSolutions = JSON.parse(
     localStorage.getItem("exercise_solutions") || "{}",
@@ -809,7 +936,7 @@ function markExerciseSolved(inputValues) {
     console.error(
       "CSRF token not found - cannot mark exercise as solved on server",
     );
-    return;
+    return Promise.resolve(null);
   }
 
   // Update isSolved state
@@ -823,7 +950,7 @@ function markExerciseSolved(inputValues) {
   console.log("Sending solution data:", requestData);
 
   // Send to the server
-  fetch(`/exercise/${exercise.id}/solved/`, {
+  return fetch(`/exercise/${exercise.id}/solved/`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -839,12 +966,14 @@ function markExerciseSolved(inputValues) {
     })
     .then((data) => {
       console.log("Exercise marked as solved on server:", data);
+      return data;
     })
     .catch((error) => {
       console.error("Error marking exercise as solved:", error);
 
       // Even if server fails, we still consider it solved locally
       isSolved = true;
+      return null;
     });
 }
 
@@ -857,19 +986,60 @@ function setupJsEditor() {
   const jsEditorElement = document.getElementById("js-editor");
   if (!jsEditorElement) return;
 
-  // JavaScript template with helpful comments and example code
-  const jsTemplate = `// Use execQuery to run SQL queries
-// Parameters:
-// - queryString: The SQL query to execute (with placeholders like :name if needed)
-// - params: Object with parameter values, e.g. {name: 'value'} (optional)
+  // Create a JavaScript template with helpful comments, examples, and parameter info
+  let placeholdersInfo = "";
+  if (
+    Array.isArray(exercise.placeholders) &&
+    exercise.placeholders.length > 0
+  ) {
+    placeholdersInfo =
+      "// IMPORTANT: Available parameters for this exercise:\n";
+    exercise.placeholders.forEach((p) => {
+      placeholdersInfo += `// - ${p.name}: ${p.type || "string"}${p.regex_pattern ? ` (pattern: ${p.regex_pattern})` : ""}${p.default_value ? ` (default: ${p.default_value})` : ""}\n`;
+    });
+    placeholdersInfo += "//\n";
+  } else {
+    placeholdersInfo =
+      "// NOTE: This exercise has no defined placeholders.\n//\n";
+  }
+
+  // Generate examples based on available placeholders
+  let examples = "";
+  if (
+    Array.isArray(exercise.placeholders) &&
+    exercise.placeholders.length > 0
+  ) {
+    // Create examples for both calling styles
+    const placeholderNames = exercise.placeholders.map((p) => p.name);
+
+    // Named parameters style example
+    let namedParamsExample =
+      "// Using named parameters (object):\n// execQuery({";
+    namedParamsExample += placeholderNames
+      .map((name) => `${name}: "value"`)
+      .join(", ");
+    namedParamsExample += "});\n\n";
+
+    // Positional parameters style example
+    let positionalParamsExample =
+      "// Using positional parameters (same order as listed above):\n// execQuery(";
+    positionalParamsExample += placeholderNames.map(() => `"value"`).join(", ");
+    positionalParamsExample += ");\n";
+
+    examples = namedParamsExample + positionalParamsExample;
+  } else {
+    examples = "// No parameters needed for this exercise:\n// execQuery();\n";
+  }
+
+  const jsTemplate = `// Use execQuery function to run the predefined query with your parameter values
+// The base query is: ${exercise.base_query.replace(/\n/g, " ").replace(/"/g, '\\"')}
+//
+// You don't need to provide the SQL query - only the values for placeholders
 // Returns: Array of result objects from SQL.js
 
+${placeholdersInfo}
 // Examples:
-// Simple query
-// execQuery('SELECT * FROM users');
-
-// Query with parameters
-// execQuery('SELECT * FROM users WHERE name = :name', {name: "' OR '1'='1"});
+${examples}
 
 // For time-based/blind injection challenges:
 // Use async/await with setTimeout to measure time differences
@@ -877,22 +1047,22 @@ function setupJsEditor() {
 async function runExploit() {
   // Your exploit code here
   // For example, to extract a password character by character:
-  
+
   let extractedData = '';
   const possibleChars = 'abcdefghijklmnopqrstuvwxyz0123456789_-{}!@#$%^&*()';
-  
+
   for (let position = 1; position <= 8; position++) {
     for (let i = 0; i < possibleChars.length; i++) {
       const char = possibleChars[i];
       const startTime = performance.now();
-      
+
       const result = execQuery(
         'SELECT * FROM users WHERE username = "admin" AND substr(password, ' + position + ', 1) = "' + char + '" AND 1=sleep(0.1)'
       );
-      
+
       const endTime = performance.now();
       const timeDiff = endTime - startTime;
-      
+
       if (timeDiff > 100) {  // If query took longer than 100ms
         extractedData += char;
         console.log('Found character at position ' + position + ': ' + char);
@@ -900,7 +1070,7 @@ async function runExploit() {
       }
     }
   }
-  
+
   console.log('Extracted data: ' + extractedData);
 }
 
@@ -926,196 +1096,283 @@ runExploit();
     consoleOutput.id = "js-console-output";
     consoleOutput.className = "js-console-output";
     consoleOutput.style.display = "none";
-    
+
     // Insert after the JS editor section
     const jsEditorSection = document.getElementById("js-editor-section");
-    jsEditorSection.parentNode.insertBefore(consoleOutput, jsEditorSection.nextSibling);
+    jsEditorSection.parentNode.insertBefore(
+      consoleOutput,
+      jsEditorSection.nextSibling,
+    );
   }
 
   // Override console.log for the JavaScript evaluation
   const originalConsoleLog = console.log;
   const originalConsoleError = console.error;
   const originalConsoleWarn = console.warn;
-  
+
   // Run button event handler
-  document.getElementById("run-js-btn").addEventListener("click", function() {
-    // Clear previous results
-    hideResults();
-    
-    // Clear console output
-    consoleOutput.innerHTML = "";
-    consoleOutput.style.display = "block";
-    
-    // Override console methods to capture output
-    console.log = function() {
-      const args = Array.from(arguments);
-      originalConsoleLog.apply(console, args);
-      const logLine = document.createElement("div");
-      logLine.className = "log";
-      logLine.textContent = args.map(arg => 
-        typeof arg === 'object' ? JSON.stringify(arg, null, 2) : arg
-      ).join(" ");
-      consoleOutput.appendChild(logLine);
-      consoleOutput.scrollTop = consoleOutput.scrollHeight;
-    };
-    
-    console.error = function() {
-      const args = Array.from(arguments);
-      originalConsoleError.apply(console, args);
-      const errorLine = document.createElement("div");
-      errorLine.className = "error";
-      errorLine.textContent = args.map(arg => 
-        typeof arg === 'object' ? JSON.stringify(arg, null, 2) : arg
-      ).join(" ");
-      consoleOutput.appendChild(errorLine);
-      consoleOutput.scrollTop = consoleOutput.scrollHeight;
-    };
-    
-    console.warn = function() {
-      const args = Array.from(arguments);
-      originalConsoleWarn.apply(console, args);
-      const warnLine = document.createElement("div");
-      warnLine.className = "warn";
-      warnLine.textContent = args.map(arg => 
-        typeof arg === 'object' ? JSON.stringify(arg, null, 2) : arg
-      ).join(" ");
-      consoleOutput.appendChild(warnLine);
-      consoleOutput.scrollTop = consoleOutput.scrollHeight;
-    };
-    
-    try {
-      // Show loading indicator
-      showLoading();
-      
-      // Execute the JavaScript code
-      const jsCode = jsEditor.getValue();
-      
-      // Define the execQuery function that will be available to the JS code
-      window.execQuery = function(queryString, params = {}) {
-        if (!db) {
-          console.error("Database not initialized");
-          return null;
-        }
-        
-        try {
-          // Replace placeholders in the query
-          let processedQuery = queryString;
-          
-          // Replace parameters if provided
-          if (params && Object.keys(params).length > 0) {
-            for (const [key, value] of Object.entries(params)) {
-              // Create a regex pattern to find the placeholder (e.g., :name)
-              const pattern = new RegExp(`:${key}\\b`, 'g');
-              // Replace the placeholder with the value
-              processedQuery = processedQuery.replace(pattern, value);
+  const runJsButton = document.getElementById("run-js-btn");
+  if (runJsButton) {
+    runJsButton.addEventListener("click", function () {
+      // Clear previous results
+      hideResults();
+
+      // Clear console output
+      consoleOutput.innerHTML = "";
+      consoleOutput.style.display = "block";
+
+      // Override console methods to capture output
+      console.log = function () {
+        const args = Array.from(arguments);
+        originalConsoleLog.apply(console, args);
+        const logLine = document.createElement("div");
+        logLine.className = "log";
+        logLine.textContent = args
+          .map((arg) =>
+            typeof arg === "object" ? JSON.stringify(arg, null, 2) : arg,
+          )
+          .join(" ");
+        consoleOutput.appendChild(logLine);
+        consoleOutput.scrollTop = consoleOutput.scrollHeight;
+      };
+
+      console.error = function () {
+        const args = Array.from(arguments);
+        originalConsoleError.apply(console, args);
+        const errorLine = document.createElement("div");
+        errorLine.className = "error";
+        errorLine.textContent = args
+          .map((arg) =>
+            typeof arg === "object" ? JSON.stringify(arg, null, 2) : arg,
+          )
+          .join(" ");
+        consoleOutput.appendChild(errorLine);
+        consoleOutput.scrollTop = consoleOutput.scrollHeight;
+      };
+
+      console.warn = function () {
+        const args = Array.from(arguments);
+        originalConsoleWarn.apply(console, args);
+        const warnLine = document.createElement("div");
+        warnLine.className = "warn";
+        warnLine.textContent = args
+          .map((arg) =>
+            typeof arg === "object" ? JSON.stringify(arg, null, 2) : arg,
+          )
+          .join(" ");
+        consoleOutput.appendChild(warnLine);
+        consoleOutput.scrollTop = consoleOutput.scrollHeight;
+      };
+
+      try {
+        // Show loading indicator
+        showLoading();
+
+        // Execute the JavaScript code
+        const jsCode = jsEditor.getValue();
+
+        // Define the execQuery function that directly accepts placeholder values as parameters
+        // without requiring the user to specify the query string
+        window.execQuery = function (...args) {
+          if (!db) {
+            console.error("Database not initialized");
+            return null;
+          }
+
+          try {
+            // Start with the base query from the exercise
+            let processedQuery = exercise.base_query;
+            let params = {};
+
+            // Get the list of valid placeholders from the exercise
+            const validPlaceholders = Array.isArray(exercise.placeholders)
+              ? exercise.placeholders.map((p) => p.name)
+              : [];
+
+            // Handle different function call formats
+            if (
+              args.length === 1 &&
+              typeof args[0] === "object" &&
+              args[0] !== null
+            ) {
+              // Called with an object of parameters: execQuery({param1: 'value1', param2: 'value2'})
+              params = args[0];
+            } else if (validPlaceholders.length === args.length) {
+              // Called with sequential parameters: execQuery('value1', 'value2')
+              params = {};
+              validPlaceholders.forEach((name, index) => {
+                params[name] = args[index];
+              });
+            } else {
+              // Incorrect parameter count
+              throw new Error(
+                `Expected ${validPlaceholders.length} parameters (${validPlaceholders.join(", ")}), but got ${args.length}`,
+              );
             }
-          }
-          
-          // Log query if show_query is enabled
-          if (exercise.show_query) {
-            console.log("Executing query:", processedQuery);
-          } else {
-            console.log("Executing query (hidden)");
-          }
-          
-          // Execute the query
-          const result = db.exec(processedQuery);
-          
-          // Check for the flag (and anti-flag)
-          const flagFound = checkForFlag(result);
-          if (flagFound && !isSolved) {
-            // Check the anti-flag separately (for detailed logging)
-            if (exercise.anti_flag) {
-              const antiFlag = exercise.anti_flag.toLowerCase();
-              let antiFlagFound = false;
-              
-              // Check if any result contains the anti-flag
-              for (const res of result) {
-                if (!res.values) continue;
-                for (const row of res.values) {
-                  for (const cell of row) {
-                    if (cell && cell.toString().toLowerCase().includes(antiFlag)) {
-                      antiFlagFound = true;
-                      break;
+
+            // Validate parameters against the defined placeholders
+            if (Object.keys(params).length > 0) {
+              // Check for invalid parameters
+              const invalidParams = Object.keys(params).filter(
+                (key) => !validPlaceholders.includes(key),
+              );
+              if (invalidParams.length > 0) {
+                console.error(
+                  `Invalid parameters provided: ${invalidParams.join(", ")}`,
+                );
+                console.error(
+                  `Valid parameters are: ${validPlaceholders.join(", ")}`,
+                );
+                throw new Error(
+                  `Invalid parameters provided. Only the following parameters are allowed: ${validPlaceholders.join(", ")}`,
+                );
+              }
+
+              // Apply any available sanitizers
+              for (const [key, value] of Object.entries(params)) {
+                // Apply sanitization if available
+                if (window.paramSanitizers && window.paramSanitizers[key]) {
+                  try {
+                    // Apply the sanitizer function to the value
+                    params[key] = window.paramSanitizers[key](value);
+
+                    if (exercise.show_query) {
+                      console.log(`Sanitized ${key}: ${params[key]}`);
                     }
+                  } catch (error) {
+                    console.error(`Error in sanitization for ${key}:`, error);
+                  }
+                }
+              }
+
+              // Replace parameters in the query
+              for (const [key, value] of Object.entries(params)) {
+                // Create a regex pattern to find the placeholder (e.g., :name)
+                const pattern = new RegExp(`:${key}\\b`, "g");
+                // Replace the placeholder with the value
+                processedQuery = processedQuery.replace(pattern, value);
+              }
+            }
+
+            // Log query if show_query is enabled
+            if (exercise.show_query) {
+              console.log("Executing query:", processedQuery);
+            } else {
+              console.log("Executing query (hidden)");
+            }
+
+            // Execute the query
+            const result = db.exec(processedQuery);
+
+            // Check for the flag (and anti-flag)
+            const flagFound = checkForFlag(result);
+            if (flagFound && !isSolved) {
+              // Check the anti-flag separately (for detailed logging)
+              if (exercise.anti_flag) {
+                const antiFlag = exercise.anti_flag.toLowerCase();
+                let antiFlagFound = false;
+
+                // Check if any result contains the anti-flag
+                for (const res of result) {
+                  if (!res.values) continue;
+                  for (const row of res.values) {
+                    for (const cell of row) {
+                      if (
+                        cell &&
+                        cell.toString().toLowerCase().includes(antiFlag)
+                      ) {
+                        antiFlagFound = true;
+                        break;
+                      }
+                    }
+                    if (antiFlagFound) break;
                   }
                   if (antiFlagFound) break;
                 }
-                if (antiFlagFound) break;
+
+                if (antiFlagFound) {
+                  console.log(
+                    "Flag found but anti-flag also found. Challenge not solved.",
+                  );
+                  return result;
+                }
               }
-              
-              if (antiFlagFound) {
-                console.log("Flag found but anti-flag also found. Challenge not solved.");
-                return result;
+
+              console.log("SUCCESS! Flag found:", exercise.expected_flag);
+              // Mark as solved
+              markExerciseSolved({});
+              // Update UI to show success
+              showSuccess();
+
+              // Add confetti effect
+              if (typeof confetti !== "undefined") {
+                confetti({
+                  particleCount: 100,
+                  spread: 70,
+                  origin: { y: 0.6 },
+                });
               }
             }
-            
-            console.log("SUCCESS! Flag found:", exercise.expected_flag);
-            // Mark as solved
-            markExerciseSolved({});
-            // Update UI to show success
-            showSuccess();
-            
-            // Add confetti effect
-            if (typeof confetti !== "undefined") {
-              confetti({
-                particleCount: 100,
-                spread: 70,
-                origin: { y: 0.6 },
-              });
-            }
-          }
-          
-          // Return the result
-          return result;
-        } catch (error) {
-          // Handle errors according to show_errors setting
-          if (exercise.show_errors) {
-            if (exercise.show_query) {
-              console.error("SQL Error:", error.message);
+
+            // Return the result
+            return result;
+          } catch (error) {
+            // Handle errors according to show_errors setting
+            if (exercise.show_errors) {
+              if (exercise.show_query) {
+                console.error("SQL Error:", error.message);
+              } else {
+                // Filter error message to avoid revealing query structure
+                let filteredMessage = error.message;
+                filteredMessage = filteredMessage.replace(
+                  /near "([^"]+)"/,
+                  'near "..."',
+                );
+                filteredMessage = filteredMessage.replace(
+                  /at offset \d+/,
+                  "at offset ...",
+                );
+                console.error("Error:", filteredMessage);
+              }
             } else {
-              // Filter error message to avoid revealing query structure
-              let filteredMessage = error.message;
-              filteredMessage = filteredMessage.replace(/near "([^"]+)"/, 'near "..."');
-              filteredMessage = filteredMessage.replace(/at offset \d+/, "at offset ...");
-              console.error("Error:", filteredMessage);
+              console.error("Query execution failed. Try a different approach.");
             }
-          } else {
-            console.error("Query execution failed. Try a different approach.");
+            return null;
           }
-          return null;
-        }
       };
-      
-      // Define a sleep function for time-based techniques
-      window.sleep = function(ms) {
-        return new Promise(resolve => setTimeout(resolve, ms));
-      };
-      
-      // Execute the code
-      new Function(jsCode)();
-      
-    } catch (error) {
-      console.error("JavaScript execution error:", error.message);
-    } finally {
-      // Hide loading indicator
-      hideLoading();
-      
-      // Restore original console methods
-      console.log = originalConsoleLog;
-      console.error = originalConsoleError;
-      console.warn = originalConsoleWarn;
-    }
+
+        // Define a sleep function for time-based techniques
+        window.sleep = function (ms) {
+          return new Promise((resolve) => setTimeout(resolve, ms));
+        };
+
+        // Execute the code
+        new Function(jsCode)();
+      } catch (error) {
+        console.error("JavaScript execution error:", error.message);
+      } finally {
+        // Hide loading indicator
+        hideLoading();
+
+        // Restore original console methods
+        console.log = originalConsoleLog;
+        console.error = originalConsoleError;
+        console.warn = originalConsoleWarn;
+      }
   });
   
   // Reset button event handler
-  document.getElementById("reset-js-btn").addEventListener("click", function() {
-    jsEditor.setValue(jsTemplate);
-    consoleOutput.innerHTML = "";
-    consoleOutput.style.display = "none";
-    hideResults();
-  });
+  const resetJsButton = document.getElementById("reset-js-btn");
+  if (resetJsButton) {
+    resetJsButton.addEventListener("click", function () {
+      jsEditor.setValue(jsTemplate);
+      consoleOutput.innerHTML = "";
+      consoleOutput.style.display = "none";
+      hideResults();
+    });
+  }
 }
+} // End of setupJsEditor function
 
 /**
  * Get CSRF token from meta tag or cookie

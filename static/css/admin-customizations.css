@@ -1,16 +1,20 @@
 /* Custom CSS for the admin interface */
 .CodeMirror {
-    height: auto;
-    min-height: 150px;
-    border: 1px solid #ccc;
+    height: auto !important;
+    min-height: 250px;
+    border: 1px solid #444;
     border-radius: 4px;
     font-family: "Fira Code", "SFMono-Regular", monospace;
     font-size: 14px;
     margin-bottom: 15px;
+    width: 100%;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
 }
 
 .field-setup_code .CodeMirror,
-.field-sanitize_js .CodeMirror {
+.field-sanitize_js .CodeMirror,
+.field-description .CodeMirror,
+.field-hints .CodeMirror {
     min-height: 250px;
 }
 
@@ -124,4 +128,156 @@ select {
 /* Ensure proper spacing for inline forms */
 .inline-related fieldset {
     margin-bottom: 20px !important;
+}
+
+/* Markdown Preview Styling */
+.markdown-preview {
+    padding: 15px;
+    line-height: 1.6;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+    overflow-x: auto;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    background-color: #272822; /* Matching monokai background */
+    color: #f8f8f2; /* Matching monokai text color */
+    min-height: 250px;
+}
+
+.markdown-preview h1 {
+    font-size: 2em;
+    margin-top: 0.5em;
+    margin-bottom: 0.7em;
+    border-bottom: 1px solid #444;
+    padding-bottom: 0.3em;
+    color: #a6e22e;
+}
+
+.markdown-preview h2 {
+    font-size: 1.5em;
+    margin-top: 1em;
+    margin-bottom: 0.7em;
+    border-bottom: 1px solid #444;
+    padding-bottom: 0.3em;
+    color: #fd971f;
+}
+
+.markdown-preview h3 {
+    font-size: 1.25em;
+    margin-top: 1em;
+    margin-bottom: 0.7em;
+    color: #66d9ef;
+}
+
+.markdown-preview p {
+    margin-bottom: 1em;
+}
+
+.markdown-preview ul, 
+.markdown-preview ol {
+    margin-bottom: 1em;
+    padding-left: 2em;
+}
+
+.markdown-preview li {
+    margin-bottom: 0.5em;
+}
+
+.markdown-preview code {
+    background-color: rgba(255, 255, 255, 0.1);
+    padding: 0.2em 0.4em;
+    border-radius: 3px;
+    font-family: "Fira Code", "SFMono-Regular", Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
+    font-size: 0.9em;
+    color: #e6db74;
+}
+
+.markdown-preview pre {
+    background-color: #1e1e1e;
+    padding: 1em;
+    border-radius: 5px;
+    overflow-x: auto;
+    margin-bottom: 1em;
+}
+
+.markdown-preview pre code {
+    background-color: transparent;
+    padding: 0;
+    border-radius: 0;
+    font-size: 0.9em;
+}
+
+.markdown-preview blockquote {
+    margin: 0 0 1em;
+    padding: 0 1em;
+    color: #919191;
+    border-left: 0.25em solid #444;
+}
+
+.markdown-preview table {
+    border-collapse: collapse;
+    width: 100%;
+    margin-bottom: 1em;
+}
+
+.markdown-preview table th,
+.markdown-preview table td {
+    padding: 6px 13px;
+    border: 1px solid #444;
+}
+
+.markdown-preview table th {
+    background-color: #3c3c3c;
+    color: #f8f8f2;
+}
+
+.markdown-preview table tr {
+    background-color: #2a2a2a;
+    border-top: 1px solid #444;
+}
+
+.markdown-preview table tr:nth-child(2n) {
+    background-color: #303030;
+}
+
+.markdown-preview a {
+    color: #66d9ef;
+    text-decoration: none;
+}
+
+.markdown-preview a:hover {
+    text-decoration: underline;
+}
+
+/* Tab styling for markdown editor */
+.markdown-tabs {
+    display: flex;
+    margin-bottom: 0;
+}
+
+.markdown-tabs button {
+    padding: 8px 16px;
+    border: 1px solid #444;
+    border-bottom: none;
+    border-radius: 4px 4px 0 0;
+    margin-right: 5px;
+    background-color: #1e1e1e;
+    cursor: pointer;
+    color: #999;
+    font-weight: normal;
+    transition: background-color 0.2s, color 0.2s;
+}
+
+.markdown-tabs button:hover {
+    background-color: #272822;
+    color: #f8f8f2;
+}
+
+.markdown-tabs button.active {
+    background-color: #272822;
+    color: #a6e22e;
+    font-weight: bold;
+    border-color: #444;
+    border-bottom: 2px solid #272822;
+    margin-bottom: -1px;
+    box-shadow: 0 -2px 5px rgba(0, 0, 0, 0.2);
 }

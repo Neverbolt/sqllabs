@@ -1,15 +1,15 @@
 from django.contrib import admin
 from django.utils.html import format_html
 from django import forms
-from .models import Exercise, Placeholder
-from .widgets import SQLEditorWidget, JavaScriptEditorWidget, JsonEditorWidget
+from .models import Exercise, Placeholder, Category
+from .widgets import SQLEditorWidget, JavaScriptEditorWidget, JsonEditorWidget, MarkdownEditorWidget
 
 
 class PlaceholderInline(admin.TabularInline):
     """Inline admin for placeholders."""
     model = Placeholder
     extra = 1
-    fields = ('name', 'type', 'regex_pattern', 'description')
+    fields = ('name', 'type', 'regex_pattern', 'description', 'default_value')
     
     def get_extra(self, request, obj=None, **kwargs):
         """Dynamically set the number of empty forms."""
@@ -36,7 +36,7 @@ class PlaceholderSanitizeJsInline(admin.StackedInline):
     def get_formset(self, request, obj=None, **kwargs):
         formset = super().get_formset(request, obj, **kwargs)
         formset.form.base_fields['sanitize_js'].widget = JavaScriptEditorWidget(
-            attrs={'rows': 10, 'style': 'width: 100%;'}
+            attrs={'rows': 15, 'style': 'width: 100%; min-height: 250px;'}
         )
         return formset
 
@@ -56,7 +56,8 @@ class ExerciseAdminForm(forms.ModelForm):
         widgets = {
             'setup_code': SQLEditorWidget(attrs={'rows': 10}),
             'base_query': SQLEditorWidget(attrs={'rows': 5}),
-            'description': forms.Textarea(attrs={'rows': 5}),
+            'description': MarkdownEditorWidget(attrs={'rows': 10}),
+            'hints': MarkdownEditorWidget(attrs={'rows': 10}),
         }
         exclude = ('placeholders',)  # Hide the JSONField since we use inlines
     
@@ -91,18 +92,30 @@ class ExerciseAdminForm(forms.ModelForm):
         return instance
 
 
+@admin.register(Category)
+class CategoryAdmin(admin.ModelAdmin):
+    list_display = ('name', 'order', 'exercise_count')
+    search_fields = ('name', 'description')
+    ordering = ('order', 'name')
+    
+    def exercise_count(self, obj):
+        return obj.exercises.count()
+    
+    exercise_count.short_description = 'Exercises'
+
+
 @admin.register(Exercise)
 class ExerciseAdmin(admin.ModelAdmin):
     form = ExerciseAdminForm
-    list_display = ('title', 'difficulty_display', 'order', 'show_query', 'show_errors', 'allow_js')
-    list_filter = ('difficulty', 'show_query', 'show_errors', 'allow_js')
+    list_display = ('title', 'category', 'difficulty_display', 'view_count', 'solve_count', 'order', 'show_query', 'allow_js')
+    list_filter = ('category', 'difficulty', 'show_query', 'show_errors', 'allow_js')
     search_fields = ('title', 'description')
     ordering = ('order', 'difficulty')
     inlines = [PlaceholderInline, PlaceholderSanitizeJsInline]
     
     fieldsets = (
         ('Basic Information', {
-            'fields': ('title', 'description', 'color', 'difficulty', 'order')
+            'fields': ('title', 'description', 'hints', 'category', 'difficulty', 'order')
         }),
         ('SQL Configuration', {
             'fields': ('setup_code', 'base_query', 'expected_flag', 'anti_flag')
@@ -117,7 +130,8 @@ class ExerciseAdmin(admin.ModelAdmin):
             'all': (
                 'https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.9/codemirror.min.css',
                 'https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.9/theme/monokai.min.css',
-                'https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.9/theme/dracula.min.css',
+                'https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.9/addon/scroll/simplescrollbars.min.css',
+                'https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.9/addon/dialog/dialog.min.css',
                 'css/admin-customizations.css',
             )
         }
@@ -125,9 +139,15 @@ class ExerciseAdmin(admin.ModelAdmin):
             'https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.9/codemirror.min.js',
             'https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.9/mode/sql/sql.min.js',
             'https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.9/mode/javascript/javascript.min.js',
-            'https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.9/mode/clike/clike.min.js',
+            'https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.9/mode/markdown/markdown.min.js',
+            'https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.9/mode/xml/xml.min.js',
             'https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.9/addon/edit/matchbrackets.min.js',
             'https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.9/addon/edit/closebrackets.min.js',
+            'https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.9/addon/fold/foldcode.min.js',
+            'https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.9/addon/fold/foldgutter.min.js',
+            'https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.9/addon/scroll/simplescrollbars.min.js',
+            'https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.9/addon/selection/active-line.min.js',
+            'https://cdn.jsdelivr.net/npm/marked/marked.min.js',
         )
     
     def difficulty_display(self, obj):

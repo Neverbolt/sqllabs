@@ -1,3 +1,5 @@
+# WARNING: this is (to )
+
 # SQL Labs
 
 A Django application for learning SQL injection techniques with practical exercises.
@@ -69,7 +71,7 @@ python manage.py migrate
 
 5. (Optional) Create example exercises:
 ```bash
-python example_exercises/create_all_exercises.py
+python create_all_exercises.py
 ```
 
 6. Create a superuser:
@@ -128,7 +130,7 @@ def create_exercise(
 )
 ```
 
-See `example_exercises/create_all_exercises.py` for many more examples of different types of exercises.
+See `create_all_exercises.py` for many more examples of different types of exercises.
 
 ## Running Tests
 
@@ -143,7 +145,7 @@ This project is open-source software licensed under the MIT license.
 
 ## Example Exercises
 
-The repository includes a collection of example exercises in the `example_exercises` directory:
+The repository includes a collection of example exercises:
 
 ### Types of Exercises
 
@@ -168,12 +170,12 @@ The repository includes a collection of example exercises in the `example_exerci
 
 - To create all example exercises:
 ```bash
-python example_exercises/create_all_exercises.py
+python create_all_exercises.py
 ```
 
 - To reset all exercises and start fresh:
 ```bash
-python example_exercises/reset_exercises.py --recreate
+python reset_exercises.py --recreate
 ```
 
 ## Advanced Features
